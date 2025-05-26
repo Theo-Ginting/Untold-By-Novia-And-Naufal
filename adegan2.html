@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Video Intro</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Courier New', monospace;
+      background-color: black;
+    }
+
+    .video-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      z-index: 1;
+      transition: opacity 2s ease;
+    }
+
+    .btn-lanjut, .loading-dialog {
+      display: none;
+      position: fixed;
+      right: 20px;
+      padding: 12px 20px;
+      font-size: 1rem;
+      font-weight: bold;
+      border-radius: 6px;
+      border: 2px solid black;
+      z-index: 10;
+    }
+
+    .btn-lanjut {
+      bottom: 20px;
+      background: white;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .btn-lanjut:hover {
+      background-color: #f0f0f0;
+    }
+
+    .loading-dialog {
+      bottom: 20px;
+      background: white;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 14px;
+      border: 3px solid black;
+    }
+
+    .loading-text::after {
+      content: '';
+      animation: dots 1.2s steps(3, end) infinite;
+    }
+
+    @keyframes dots {
+      0% { content: ''; }
+      33% { content: '.'; }
+      66% { content: '..'; }
+      100% { content: '...'; }
+    }
+  </style>
+
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Video -->
+  <video id="bgVideo" class="video-bg">
+    <source src="comic animation.mp4" type="video/mp4">
+    Browser tidak mendukung video.
+  </video>
+
+  <!-- Tombol lanjut -->
+  <button class="btn-lanjut" id="btnLanjut">Lanjutkan</button>
+
+  <!-- Dialog loading -->
+  <div class="loading-dialog" id="loadingBox">
+    <span class="loading-text">LOADING</span>
+  </div>
+
+  <script>
+    const video = document.getElementById("bgVideo");
+    const btnLanjut = document.getElementById("btnLanjut");
+    const loadingBox = document.getElementById("loadingBox");
+
+    // Autoplay dengan audio hanya bisa setelah user klik
+    window.addEventListener('click', () => {
+      if (video.paused) {
+        video.play().catch(err => console.log("Autoplay gagal:", err));
+      }
+    }, { once: true });
+
+    // Saat video selesai → fade out → munculkan tombol
+    video.addEventListener("ended", () => {
+      video.style.opacity = "0";
+      setTimeout(() => {
+        btnLanjut.style.display = "block";
+      }, 2000); // tunggu fade-out selesai
+    });
+
+    // Saat tombol lanjut diklik
+    btnLanjut.addEventListener("click", () => {
+      btnLanjut.style.display = "none";
+      loadingBox.style.display = "block";
+
+      setTimeout(() => {
+        window.location.href = "adegan3.html";
+      }, 2500); // waktu tunggu sebelum pindah halaman
+    });
+  </script>
+
+</body>
+</html>

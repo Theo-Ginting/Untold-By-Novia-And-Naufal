@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Adegan Interaktif - Neo Edition</title>
+<style>
+  body, html {
+    margin:0; padding:0; height:100%;
+    background: url('background sekolah.png') no-repeat center center fixed;
+    background-size: cover;
+    font-family: Arial, sans-serif;
+    color: white;
+    overflow: hidden;
+  }
+
+  .overlay {
+    position: absolute;
+    top:0; left:0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.4);
+    z-index: 1;
+  }
+
+  .scene {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  z-index: 2;
+  padding-top: 35vh; /* lebih wajar */
+  padding-bottom: 20px;
+}
+
+
+  .dialog-character-container {
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+    max-width: 900px;
+    width: 90%;
+    margin-bottom: 20px;
+  }
+
+  .dialog-box {
+    background: rgba(30,30,30,0.85);
+    border-radius: 12px;
+    padding: 20px 30px;
+    flex: 1 1 60%;
+    min-height: 100px;
+    box-shadow: 0 0 15px #0008;
+    user-select: none;
+    opacity: 1;
+    transition: opacity 0.6s ease;
+  }
+
+  .character-label {
+    font-weight: 700;
+    font-size: 18px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .enemy { color: #b4b4b4; background-color: rgba(6, 6, 6, 0.6); padding: 2px 8px; border-radius: 6px; display: inline-block; }
+  .hero  { color: #44aaff; background-color: rgba(35, 101, 167, 0.68); padding: 2px 8px; border-radius: 6px; display: inline-block; }
+  .npc   { color: #aaaaaa; background-color: rgba(150,150,150,0.3); padding: 2px 8px; border-radius: 6px; display: inline-block; }
+
+  .character-img {
+    max-width: 250px;
+    max-height: 280px;
+    object-fit: contain;
+    border-radius: 12px;
+    box-shadow: 0 0 15px #0008;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+    user-select: none;
+  }
+
+  .choices {
+    display: none;
+    gap: 24px;
+    z-index: 4;
+    margin-top: 20px;
+    justify-content: center;
+    width: 90%;
+    max-width: 900px;
+  }
+
+  .choices.active {
+    display: flex;
+  }
+
+  .choice-btn {
+    background-color: #444;
+    border: none;
+    padding: 15px 28px;
+    border-radius: 10px;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    animation: bounce 1.2s infinite alternate;
+    box-shadow: 0 0 10px #0008;
+    user-select: none;
+    transition: all 0.4s ease;
+  }
+
+  .choice-btn:hover {
+    background-color: #666;
+  }
+
+  .fade-out {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity 0.6s ease-out !important;
+  }
+
+  @keyframes bounce {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-12px); }
+  }
+
+  /* Flash effect */
+  .flash {
+    position: fixed;
+    top:0; left:0;
+    width: 100%;
+    height: 100%;
+    background: white;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease-out;
+  }
+
+  .flash.active {
+    opacity: 1;
+  }
+
+  /* Progress bar */
+  .progress-bar-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    background: rgba(255,255,255,0.2);
+    z-index: 10;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: #44aaff;
+    width: 0%;
+    transition: width 0.5s linear;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="overlay"></div>
+
+<!-- Flash effect -->
+<div class="flash" id="flashEffect"></div>
+
+<!-- Progress bar -->
+<div class="progress-bar-container">
+  <div class="progress-bar" id="progressBar"></div>
+</div>
+
+<div class="scene">
+  <div class="dialog-character-container" id="dialogContainer">
+    <div class="dialog-box" id="dialogBox">
+      <div id="characterLabel" class="character-label enemy">Enemy</div>
+      <div id="dialogText">...</div>
+    </div>
+
+    <img id="characterImage" class="character-img" src="" alt="Karakter" />
+  </div>
+
+  <div class="choices" id="choices">
+    <button class="choice-btn" id="btnFight">Bertarung</button>
+    <button class="choice-btn" id="btnTalk">Dengarkan dulu</button>
+  </div>
+</div>
+
+<!-- Sound FX -->
+<audio id="sfxFight" src="fight.mp3"></audio>
+<audio id="sfxTalk" src="talk.mp3"></audio>
+
+<script>
+  const initialDialog = [
+    { name: "Pembully", class: "enemy", text: "Hei kamu... ngapain di sini?", image: "Pembully.png" },
+    { name: "Pembully", class: "enemy", text: "Aku nggak suka orang asing keluyuran di daerah kekuasaanku.", image: "Pembully.png" },
+    { name: "Nauvar",  class: "hero",  text: "Lepaskan gadis itu.", image: "Nauvar pixel 01.png" },
+    { name: "Pembully", class: "enemy", text: "Memangnya kenapa?! Mau bertarung?!", image: "Pembully.png" }
+  ];
+
+  const dialogBox = document.getElementById('dialogBox');
+  const characterLabel = document.getElementById('characterLabel');
+  const dialogText = document.getElementById('dialogText');
+  const characterImage = document.getElementById('characterImage');
+  const dialogContainer = document.getElementById('dialogContainer');
+
+  const choices = document.getElementById('choices');
+  const btnFight = document.getElementById('btnFight');
+  const btnTalk = document.getElementById('btnTalk');
+  const flash = document.getElementById('flashEffect');
+
+  const sfxFight = document.getElementById('sfxFight');
+  const sfxTalk = document.getElementById('sfxTalk');
+
+  const progressBar = document.getElementById('progressBar');
+
+  let index = 0;
+
+  function showDialog(arr, cb) {
+    if (index < arr.length) {
+      const current = arr[index];
+      characterLabel.textContent = current.name;
+      characterLabel.className = `character-label ${current.class}`;
+      dialogText.textContent = current.text;
+
+      if(current.class === 'hero') {
+        dialogContainer.style.flexDirection = 'row-reverse';
+      } else {
+        dialogContainer.style.flexDirection = 'row';
+      }
+
+      characterImage.style.opacity = 0;
+      setTimeout(() => {
+        characterImage.src = current.image;
+        characterImage.style.opacity = 1;
+      }, 300);
+
+      progressBar.style.width = ((index + 1) / arr.length) * 100 + '%';
+
+      index++;
+      setTimeout(() => showDialog(arr, cb), 3200);
+    } else {
+      if (cb) cb();
+    }
+  }
+
+  function showChoices() {
+    dialogBox.style.opacity = '0';
+
+    setTimeout(() => {
+      dialogBox.style.display = 'none';
+      choices.classList.add('active');
+    }, 600);
+  }
+
+  function fadeOutButtonExcept(clickedBtn) {
+    [btnFight, btnTalk].forEach(btn => {
+      if(btn !== clickedBtn) btn.classList.add('fade-out');
+    });
+  }
+
+  const fightDialog = [
+    { name: "Nauvar", class: "nauvar", text: "Baiklah, aku terima tantanganmu!", image: "Nauvar pixel 02.png" }
+  ];
+
+  const talkDialog = [
+    { name: "Pembully", class: "pembully", text: "Pengecut..~.", image: "Pembully.png" }
+  ];
+
+  btnFight.addEventListener('click', () => {
+    fadeOutButtonExcept(btnFight);
+    sfxFight.play();
+
+    flash.classList.add('active');
+    setTimeout(() => flash.classList.remove('active'), 300);
+
+    setTimeout(() => {
+      choices.classList.remove('active');
+      dialogBox.style.display = 'block';
+      dialogBox.style.opacity = '1';
+      index = 0;
+      showDialog(fightDialog, () => {
+        window.location.href = "adegan9.html";
+      });
+    }, 700);
+  });
+
+  btnTalk.addEventListener('click', () => {
+    fadeOutButtonExcept(btnTalk);
+    sfxTalk.play();
+
+    setTimeout(() => {
+      choices.classList.remove('active');
+      dialogBox.style.display = 'block';
+      dialogBox.style.opacity = '1';
+      index = 0;
+      showDialog(talkDialog, () => {
+        window.location.href = "adegan10B.html";
+      });
+    }, 700);
+  });
+
+  window.onload = () => {
+    index = 0;
+    showDialog(initialDialog, showChoices);
+  };
+</script>
+
+</body>
+</html>

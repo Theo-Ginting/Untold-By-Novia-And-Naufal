@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Adegan Permainan</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    body {
+      background: black;
+    }
+
+    /* GIF full screen background */
+    #background-gif {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+      object-fit: cover;
+      z-index: -1;
+    }
+
+    /* Tombol ke adegan 1 */
+    #option-button {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      padding: 12px 20px;
+      font-size: 16px;
+      background-color: #000;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 1s ease;
+      z-index: 10;
+    }
+
+    #option-button.show {
+      opacity: 1;
+    }
+
+    audio {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- GIF sebagai background -->
+  <img id="background-gif" src="Ending Untold.gif" alt="Background looping">
+
+  <!-- Audio musik latar -->
+  <audio id="bg-audio" autoplay loop>
+    <source src="Ending Untold.gif" type="audio/mpeg">
+    Musik tidak didukung oleh browser ini.
+  </audio>
+
+  <!-- Tombol ke adegan 1 -->
+  <button id="option-button" onclick="goToScene()">Ulang ke Adegan 1</button>
+
+  <script>
+    function goToScene() {
+      window.location.href = "adegan1.html";
+    }
+
+    // Autoplay fix buat browser yang ngeblok audio tanpa interaksi
+    document.addEventListener('click', () => {
+      const audio = document.getElementById('bg-audio');
+      if (audio.paused) {
+        audio.play().catch(e => console.log("Autoplay gagal:", e));
+      }
+    });
+
+    // Timer 5 detik buat munculin tombol
+    window.onload = function() {
+      setTimeout(() => {
+        document.getElementById("option-button").classList.add("show");
+      }, 5000);
+    };
+  </script>
+
+</body>
+</html>

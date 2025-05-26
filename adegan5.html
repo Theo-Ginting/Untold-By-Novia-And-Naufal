@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Intro Ketikan</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: black;
+      color: white;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .teks-ketik {
+      font-size: 1.5rem;
+      text-align: center;
+      max-width: 90%;
+      opacity: 1;
+      transition: opacity 0.1s ease;
+    }
+
+    .sembunyi {
+      opacity: 0;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 10px;
+      background: white;
+      animation: blink 1s infinite;
+      margin-left: 2px;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="teks-ketik" id="output">
+    <span id="typedText"></span><span class="cursor"></span>
+  </div>
+
+  <script>
+    const teksList = [
+      "Dan yap, setelah hari pertama sekolah",
+      "Kita langsunng ke kantin dan pulang..",
+      "Walau Nauvar tidak jajan, tapi siapa peduli dia memang seperti itu",
+      "Namun di pertengahan perjalanan, ada seorang gadis.. yang memang sedang hari sial nya.",
+      "PFFTT HAHAHAHA, Nauvar mulai jadi pahlawan kesiangan, ini asik."
+    
+    ];
+
+    let indexTeks = 0;
+    let charIndex = 0;
+    const delayKetikan = 50;
+    const delayDialog = 3000;
+    const output = document.getElementById('output');
+    const typedText = document.getElementById('typedText');
+
+    function ketikTeks(teks, callback) {
+      typedText.textContent = '';
+      charIndex = 0;
+
+      function ketik() {
+        if (charIndex < teks.length) {
+          typedText.textContent += teks.charAt(charIndex);
+          charIndex++;
+          setTimeout(ketik, delayKetikan);
+        } else if (callback) {
+          callback();
+        }
+      }
+
+      ketik();
+    }
+
+    function tampilkanTeksBerikutnya() {
+      output.classList.add('sembunyi');
+
+      setTimeout(() => {
+        ketikTeks(teksList[indexTeks], () => {
+          output.classList.remove('sembunyi');
+          setTimeout(() => {
+            indexTeks++;
+            if (indexTeks < teksList.length) {
+              tampilkanTeksBerikutnya();
+            } else {
+              // Semua teks selesai → jeda 1.5 detik → redirect
+              setTimeout(() => {
+                window.location.href = "adegan6.html";
+              }, 1500);
+            }
+          }, delayDialog);
+        });
+      }, 200);
+    }
+
+    // Mulai
+    ketikTeks(teksList[indexTeks], () => {
+      setTimeout(() => {
+        indexTeks++;
+        tampilkanTeksBerikutnya();
+      }, delayDialog);
+    });
+  </script>
+
+</body>
+</html>

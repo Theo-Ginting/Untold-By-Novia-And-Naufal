@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Pixel Dot Battle - Background & New Player KO</title>
+<style>
+  body {
+    margin: 0; 
+    font-family: monospace; 
+    user-select: none;
+    background: #121212;
+    display: flex; 
+    flex-direction: column; 
+    align-items: center;
+    color: white;
+  }
+
+  #game {
+    position: relative;
+    width: 800px; height: 400px;
+    background-size: cover;
+    background-position: center;
+    border: 3px solid #555;
+    border-radius: 10px;
+    margin-top: 20px;
+    overflow: hidden;
+  }
+
+  .character {
+    position: absolute;
+    bottom: 30px;
+    width: 32px; height: 32px;
+    border-radius: 4px;
+    filter: drop-shadow(0 0 2px);
+    transform-origin: center bottom;
+    transition: filter 0.3s ease;
+  }
+
+  /* Warna karakter */
+  #player {
+    background: blue;
+    filter: drop-shadow(0 0 4px #00f);
+  }
+
+  #enemy {
+    background: black;
+    filter: drop-shadow(0 0 4px #222);
+  }
+
+  #new-player {
+    background: red;
+    filter: drop-shadow(0 0 6px #f00);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 1s ease, transform 1s ease;
+    display: none;
+  }
+
+  @keyframes walkAnim {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  .walk {
+    animation: walkAnim 0.5s infinite;
+  }
+
+  @keyframes attackAnim {
+    0% { transform: translateX(0) scale(1) rotate(0deg); }
+    30% { transform: translateX(12px) scale(1.2) rotate(15deg); }
+    60% { transform: translateX(0) scale(1) rotate(0deg); }
+    100% { transform: translateX(0) scale(1) rotate(0deg); }
+  }
+  .attack {
+    animation: attackAnim 0.3s forwards;
+  }
+
+  @keyframes defendAnim {
+    0% { transform: scale(1); background-color: blue; }
+    50% { transform: scale(0.8) translateY(4px); background-color: #3af; }
+    100% { transform: scale(1); background-color: blue; }
+  }
+  .defend {
+    animation: defendAnim 1.5s forwards;
+  }
+
+  /* Zoom efek saat KO */
+  @keyframes zoomKO {
+    0% { transform: scale(1) translateX(0); filter: drop-shadow(0 0 4px #222); }
+    50% { transform: scale(2) translateX(100px) rotate(10deg); filter: drop-shadow(0 0 12px #f00); }
+    100% { transform: scale(1) translateX(0); filter: drop-shadow(0 0 4px #222); }
+  }
+
+  /* HP bar */
+  .hp-bar {
+    width: 90%;
+    height: 18px;
+    background: #333;
+    margin: 10px auto;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .hp {
+    height: 100%;
+    background: linear-gradient(90deg, limegreen, green);
+    width: 100%;
+    transition: width 0.3s;
+  }
+
+  #log {
+    height: 24px;
+    margin-top: 10px;
+    color: #ccc;
+  }
+
+  /* Overlay tulisan Ready & Go */
+  #overlay {
+    position: absolute;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 72px;
+    font-weight: bold;
+    letter-spacing: 4px;
+    color: white;
+    user-select: none;
+    z-index: 10;
+  }
+</style>
+</head>
+<body>
+<h2>Pixel Dot Battle - Background & New Player KO</h2>
+
+<label style="margin-top:10px;">
+  Ganti Background: 
+  <input type="text" id="bg-url" placeholder="Masukkan URL gambar..." style="width: 300px;" />
+  <button id="set-bg">Set</button>
+</label>
+
+<div class="hp-bar"><div id="player-hp" class="hp"></div></div>
+<div class="hp-bar"><div id="enemy-hp" class="hp"></div></div>
+
+<div id="game" style="background-image: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80');">
+  <div id="player" class="character walk" style="left: 100px;"></div>
+  <div id="enemy" class="character walk" style="left: 700px;"></div>
+  <div id="new-player" class="character" style="left: 100px;"></div>
+  <div id="overlay">Ready?</div>
+</div>
+
+<div id="log">← → = gerak | Spasi = serang | Shift = bertahan</div>
+
+<script>
+  const game = document.getElementById("game");
+  const player = document.getElementById("player");
+  const enemy = document.getElementById("enemy");
+  const newPlayer = document.getElementById("new-player");
+  const playerHpBar = document.getElementById("player-hp");
+  const enemyHpBar = document.getElementById("enemy-hp");
+  const log = document.getElementById("log");
+  const overlay = document.getElementById("overlay");
+  const bgInput = document.getElementById("bg-url");
+  const setBgBtn = document.getElementById("set-bg");
+
+  let playerX = 100;
+  let enemyX = 700;
+  let playerMaxHp = 1000;
+  let enemyMaxHp = 1000;
+  let playerHp = playerMaxHp;
+  let enemyHp = enemyMaxHp;
+  let playerMoving = 0;
+  let defending = false;
+  let enemyAlive = true;
+  let gameStarted = false;
+  let newPlayerActive = false;
+
+  // Ganti background sesuai input user
+  setBgBtn.addEventListener("click", () => {
+    const url = bgInput.value.trim();
+    if(url){
+      game.style.backgroundImage = `url('${url}')`;
+      log.innerText = "Background diganti!";
+    } else {
+      log.innerText = "Masukkan URL gambar dulu ya!";
+    }
+  });
+
+  function updatePosition() {
+    player.style.left = playerX + "px";
+    if(enemyAlive){
+      enemy.style.left = enemyX + "px";
+      enemy.style.display = "block";
+    } else {
+      enemy.style.display = "none";
+    }
+    if(newPlayerActive){
+      newPlayer.style.left = playerX + "px";
+      newPlayer.style.display = "block";
+    } else {
+      newPlayer.style.display = "none";
+    }
+
+    playerHpBar.style.width = (playerHp / playerMaxHp * 100) + "%";
+    enemyHpBar.style.width = (enemyHp / enemyMaxHp * 100) + "%";
+  }
+
+  function distance() {
+    return Math.abs(playerX - enemyX);
+  }
+
+  function flash(element, color = "red", duration = 150) {
+    const original = element.style.backgroundColor;
+    element.style.backgroundColor = color;
+    setTimeout(() => {
+      if(element.id === "player") element.style.backgroundColor = "blue";
+      else if(element.id === "enemy") element.style.backgroundColor = "black";
+      else if(element.id === "new-player") element.style.backgroundColor = "red";
+      else element.style.backgroundColor = original;
+    }, duration);
+  }
+
+  function playerAttack() {
+    if (!enemyAlive || !gameStarted || newPlayerActive) {
+      log.innerText = enemyAlive ? "Tunggu sampai 'Go!' dulu atau player baru selesai." : "Musuh sudah KO!";
+      return;
+    }
+    if (distance() < 80) {
+      let damage = 40;
+      enemyHp = Math.max(0, enemyHp - damage);
+      log.innerText = `Kena! Musuh -${damage} HP`;
+      player.classList.remove("walk");
+      player.classList.add("attack");
+      flash(enemy, "red");
+
+      setTimeout(() => {
+        player.classList.remove("attack");
+        player.classList.add("walk");
+      }, 300);
+
+      if(enemyHp === 0){
+        enemyAlive = false;
+        log.innerText = "Musuh KO! Kamu menang!";
+      }
+    } else {
+      log.innerText = "Terlalu jauh untuk menyerang!";
+    }
+  }
+
+  function playerDefend() {
+    if(!gameStarted || newPlayerActive) return;
+    defending = true;
+    player.classList.add("defend");
+    setTimeout(() => {
+      player.classList.remove("defend");
+      defending = false;
+    }, 1500);
+  }
+
+  // Player bergerak, batas game area 0-770
+  function playerMove() {
+    if(playerMoving !== 0){
+      playerX += playerMoving * 4;
+      if(playerX < 0) playerX = 0;
+      if(playerX > 770) playerX = 770;
+      player.classList.add("walk");
+    } else {
+      player.classList.remove("walk");
+    }
+  }
+
+  // Enemy bot AI, maju terus mendekati player kecuali sudah terlalu dekat (jarak < 60)
+  function enemyAI(){
+    if(!enemyAlive) return;
+    if(enemyX - playerX > 60){
+      enemyX -= 2;
+      enemy.classList.add("walk");
+    } else {
+      enemy.classList.remove("walk");
+      // musuh bisa menyerang player secara random dengan cooldown
+      if(Math.random() < 0.01){
+        enemyAttack();
+      }
+    }
+  }
+
+  function enemyAttack(){
+    if(!enemyAlive) return;
+    if(distance() < 80){
+      enemy.classList.add("attack");
+      flash(player, "red");
+      setTimeout(() => {
+        enemy.classList.remove("attack");
+      }, 300);
+      if(defending){
+        log.innerText = "Kamu menahan serangan musuh!";
+      } else {
+        let damage = 50;
+        playerHp = Math.max(0, playerHp - damage);
+        log.innerText = `Musuh menyerang! Kamu -${damage} HP`;
+        if(playerHp === 0){
+          log.innerText = "Kamu kalah...";
+          triggerNewPlayer();
+        }
+      }
+    }
+  }
+
+  // Animasi & logic kemunculan pemain baru warna merah setelah player kalah
+  function triggerNewPlayer(){
+    if(newPlayerActive) return;
+    newPlayerActive = true;
+
+    // Hide player lama
+    player.style.display = "none";
+
+    // Delay 2 detik sambil muncul animasi fade-in dan slide-up new player
+    newPlayer.style.opacity = 0;
+    newPlayer.style.transform = "translateY(20px)";
+    newPlayer.style.display = "block";
+
+    setTimeout(() => {
+      newPlayer.style.opacity = 1;
+      newPlayer.style.transform = "translateY(0)";
+    }, 100);
+
+    // Setelah animasi selesai, langsung serang musuh sampai KO dengan zoom efek
+    setTimeout(() => {
+      newPlayerAttackSequence();
+    }, 2100);
+  }
+
+  // Serangan pemain baru otomatis sampai KO dengan efek zoom dramatis
+  function newPlayerAttackSequence(){
+    if(!enemyAlive) return;
+
+    newPlayer.classList.add("attack");
+
+    // Zoom efek ke musuh
+    enemy.style.animation = "zoomKO 0.6s forwards";
+
+    setTimeout(() => {
+      enemyHp = 0;
+      enemyAlive = false;
+      enemy.style.display = "none";
+      newPlayer.classList.remove("attack");
+      log.innerText = "Pemain baru KO musuh! Kamu menang dengan gaya!";
+      
+      // Reset posisi dan tampilkan kembali player lama (optional)
+      playerHp = playerMaxHp;
+      player.style.display = "block";
+      newPlayerActive = false;
+      updatePosition();
+    }, 600);
+  }
+
+  // Key handling
+  window.addEventListener("keydown", (e) => {
+    if(!gameStarted || newPlayerActive) return;
+
+    switch(e.code){
+      case "ArrowLeft":
+        playerMoving = -1;
+        break;
+      case "ArrowRight":
+        playerMoving = 1;
+        break;
+      case "Space":
+        playerAttack();
+        break;
+      case "ShiftLeft":
+      case "ShiftRight":
+        playerDefend();
+        break;
+    }
+  });
+
+  window.addEventListener("keyup", (e) => {
+    if(e.code === "ArrowLeft" && playerMoving === -1) playerMoving = 0;
+    if(e.code === "ArrowRight" && playerMoving === 1) playerMoving = 0;
+  });
+
+  // Start game sequence: Ready? -> Go! -> Game mulai + musuh maju
+  function startGame() {
+    overlay.innerText = "Ready?";
+    overlay.style.display = "flex";
+
+    setTimeout(() => {
+      overlay.innerText = "Go!";
+      // Musuh mulai maju dari 700 ke 600 (dekat player)
+      let targetX = 600;
+      let interval = setInterval(() => {
+        if(enemyX > targetX){
+          enemyX -= 2;
+          updatePosition();
+        } else {
+          clearInterval(interval);
+          overlay.style.display = "none";
+          gameStarted = true;
+        }
+      }, 20);
+    }, 1500);
+  }
+
+  function gameLoop() {
+    if(gameStarted && !newPlayerActive && playerHp > 0 && enemyHp > 0){
+      playerMove();
+      enemyAI();
+    }
+    updatePosition();
+    requestAnimationFrame(gameLoop);
+  }
+
+  updatePosition();
+  startGame();
+  gameLoop();
+
+</script>
+</body>
+</html>

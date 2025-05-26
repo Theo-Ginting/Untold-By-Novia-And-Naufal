@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Visual Novel</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Segoe UI', sans-serif;
+      background: black;
+    }
+
+    .loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgb(50, 49, 49);
+      color: rgb(214, 207, 207);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      z-index: 9999;
+    }
+
+    .container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: url('Background sekolah.png') center/cover no-repeat fixed;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      opacity: 0;
+      transition: opacity 1.5s ease;
+    }
+
+    .container.visible {
+      opacity: 1;
+    }
+
+    .character {
+      position: absolute;
+      bottom: 174px;
+      height: 410px;
+      margin-left: 180px;
+      margin-right: 180px;
+      width: auto;
+      transition: all 0.2s ease-in;
+      opacity: 0;
+    }
+
+    .character.left {
+      left: 40px;
+    }
+
+    .character.right {
+      right: 50px;
+    }
+
+    .dialog-box {
+      width: 90%;
+      max-width: 700px;
+      background-color: rgba(143, 142, 142, 0.85);
+      color: rgb(248, 242, 242);
+      padding: 20px;
+      border-radius: 15px;
+      margin-bottom: 40px;
+      font-size: 18px;
+      line-height: 1.5;
+      opacity: 0;
+      transition: opacity 1.5s ease;
+    }
+
+    
+    .dialog-box.visible {
+      opacity: 1;
+    }
+
+    .dialog-name {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .menu {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: none;
+      z-index: 10;
+    }
+
+    .menu button {
+      background-color: rgba(18, 9, 92, 0.6);
+      color: white;
+      border: none;
+      margin-left: 10px;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .click-hint {
+      font-size: 14px;
+      opacity: 0.5;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="loader" id="loader">Memuat cerita...</div>
+
+  <div class="container" id="scene" style="display: none;">
+    <img src="" class="character left" id="charLeft" />
+    <img src="" class="character right" id="charRight" />
+
+    <div class="dialog-box" id="dialogBox">
+      <div class="dialog-name" id="dialogName"></div>
+      <div class="dialog-text" id="dialogText"></div>
+      <div class="click-hint">[Klik untuk lanjut]</div>
+    </div>
+
+    <div class="menu" id="menuButtons">
+      <button onclick="alert('Progress disimpan!')">Simpan</button>
+      <button onclick="window.location.href='adegan5.html'">Lanjutkan</button>
+    </div>
+
+    <audio id="typeSound" src="typing.mp3" preload="auto"></audio>
+    <audio id="bgMusic" src="Pembukaan game.mp4" preload="auto" loop></audio>
+  </div>
+
+  <script>
+    const dialogData = [
+      { name: "", text: "..." },
+      { name: "Amdan", text: "Kita sudah berkenalan tadi, aku panggil kamu Var saja ya?", side: "right", img: "Amdan01.png" },
+      { name: "Nauvar", text: "...", side: "left", img: "Nauvar02.png" },
+      { name: "Amdan", text: "Kau unik.", side: "right", img: "Amdan02.png" },
+      { name: "Amdan", text: "Oh ya, bagaimana jalan-jalan dulu? Kita baru saja saling menyapa.", side: "right", img: "Amdan03.png" },
+      { name: "Nauvar", text: "Tidak, aku ingin langsung pulang.", side: "left", img: "Nauvar01.png" },
+      { name: "Amdan", text: "Ayolah pasti kau juga bosan, sekolah langsung pulang.", side: "right", img: "Amdan01.png" },
+      { name: "Nauvar", text: "(sigh) Yasudah, jangan terlalu larut sore.", side: "left", img: "Nauvar01.png" },
+      { name: "Amdan", text: "Tenang saja, tidak akan lama kawan", side: "right", img: "Amdan03.png" },
+      { name: "Nauvar", text: "...", side: "left", img: "Nauvar03.png" },
+      { name: "Amdan", text: "Kita pulang naik kereta, Mau?", side: "right", img:"Amdan03.png"  },
+      { name: "Nauvar", text: "Huh... yaudah deh", side: "left", img: "Nauvar01.png"},
+      { name: "Amdan", text: "Hehee makasih", side: "right", img:"Amdan01.png"}
+    ];
+
+    const dialogBox = document.getElementById("dialogBox");
+    const dialogName = document.getElementById("dialogName");
+    const dialogText = document.getElementById("dialogText");
+    const charLeft = document.getElementById("charLeft");
+    const charRight = document.getElementById("charRight");
+    const typeSound = document.getElementById("typeSound");
+    const bgMusic = document.getElementById("bgMusic");
+    const menu = document.getElementById("menuButtons");
+    const loader = document.getElementById("loader");
+    const scene = document.getElementById("scene");
+
+    let index = 0;
+    let isTyping = false;
+    let typingInterval;
+
+    function typeText(text, callback) {
+      isTyping = true;
+      dialogText.textContent = "";
+      let i = 0;
+      typingInterval = setInterval(() => {
+        dialogText.textContent += text.charAt(i);
+        if (text.charAt(i) !== ' ') {
+          typeSound.currentTime = 0;
+          typeSound.play();
+        }
+        i++;
+        if (i >= text.length) {
+          clearInterval(typingInterval);
+          isTyping = false;
+          if (callback) callback();
+        }
+      }, 30);
+    }
+
+    async function fadeIn(element) {
+      return new Promise(resolve => {
+        element.style.opacity = 0;
+        element.style.display = 'flex';
+        let opacity = 0;
+        const interval = setInterval(() => {
+          opacity += 0.05;
+          if (opacity >= 1) {
+            opacity = 1;
+            clearInterval(interval);
+            resolve();
+          }
+          element.style.opacity = opacity;
+        }, 50);
+      });
+    }
+
+    async function fadeOut(element) {
+      return new Promise(resolve => {
+        let opacity = 1;
+        const interval = setInterval(() => {
+          opacity -= 0.05;
+          if (opacity <= 0) {
+            opacity = 0;
+            clearInterval(interval);
+            element.style.display = 'none';
+            resolve();
+          }
+          element.style.opacity = opacity;
+        }, 50);
+      });
+    }
+
+    async function showDialog() {
+      if (isTyping) {
+        clearInterval(typingInterval);
+        dialogText.textContent = dialogData[index - 1].text;
+        isTyping = false;
+        return;
+      }
+
+      if (index >= dialogData.length) {
+        await fadeOut(dialogBox);
+        charLeft.style.opacity = 0;
+        charRight.style.opacity = 0;
+        menu.style.display = "block";
+        return;
+      }
+
+      const dialog = dialogData[index];
+      dialogName.textContent = dialog.name || "";
+      charLeft.style.opacity = 0;
+      charRight.style.opacity = 0;
+
+      if (dialog.side === "left") {
+        charLeft.src = dialog.img;
+        charLeft.style.opacity = 1;
+      } else if (dialog.side === "right") {
+        charRight.src = dialog.img;
+        charRight.style.opacity = 1;
+      }
+
+      dialogBox.style.opacity = 0;
+      dialogBox.style.display = "block";
+      await new Promise(r => setTimeout(r, 100));
+      dialogBox.style.transition = "opacity 1.2s ease";
+      dialogBox.style.opacity = 1;
+
+      typeText(dialog.text);
+      index++;
+    }
+
+    window.addEventListener("click", showDialog);
+
+    window.addEventListener("load", async () => {
+      await fadeOut(loader);
+      scene.style.display = "flex";
+      await fadeIn(scene);
+      bgMusic.volume = 0.4;
+      bgMusic.play();
+      showDialog();
+    });
+  </script>
+</body>
+</html>

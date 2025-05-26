@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Intro Ketikan</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: black;
+      color: white;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .teks-ketik {
+      font-size: 1.5rem;
+      text-align: center;
+      max-width: 90%;
+      opacity: 0;
+      transition: opacity 1s ease-in-out;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 10px;
+      background: white;
+      animation: blink 1s infinite;
+      margin-left: 2px;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="teks-ketik" id="output">
+    <span id="typedText"></span><span class="cursor"></span>
+  </div>
+
+  <script>
+    const teksList = [
+      "...",
+      "Aku hampir terluka parah",
+      "Amdan?..dia menyelamatkan ku",
+      "..."
+    ];
+
+    let indexTeks = 0;
+    let charIndex = 0;
+    const delayKetikan = 30;
+    const output = document.getElementById('output');
+    const typedText = document.getElementById('typedText');
+
+    function ketikTeks(teks, callback) {
+      typedText.textContent = '';
+      charIndex = 0;
+
+      function ketik() {
+        if (charIndex < teks.length) {
+          typedText.textContent += teks.charAt(charIndex);
+          charIndex++;
+          setTimeout(ketik, delayKetikan);
+        } else if (callback) {
+          callback();
+        }
+      }
+
+      ketik();
+    }
+
+    function tampilkanTeksBerikutnya() {
+      output.style.opacity = 0;
+      setTimeout(() => {
+        ketikTeks(teksList[indexTeks], () => {
+          output.style.opacity = 1;
+
+          setTimeout(() => {
+            output.style.opacity = 0;
+
+            setTimeout(() => {
+              indexTeks++;
+              if (indexTeks < teksList.length) {
+                tampilkanTeksBerikutnya();
+              } else {
+                setTimeout(() => {
+                  window.location.href = "adegan11B.html";
+                }, 1500);
+              }
+            }, 1000); // Fade out selesai
+          }, 1500); // Teks tampil selama 1.5 detik
+        });
+      }, 1000); // Fade in selesai
+    }
+
+    // Mulai
+    ketikTeks(teksList[indexTeks], () => {
+      output.style.opacity = 1;
+      setTimeout(() => {
+        indexTeks++;
+        tampilkanTeksBerikutnya();
+      }, 1500);
+    });
+  </script>
+
+</body>
+</html>
